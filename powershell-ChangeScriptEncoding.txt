@@ -1,0 +1,8 @@
+#Untested
+
+#To avoid emoji or symbol corruption:
+# - Open the script in VS Code
+# - Click "Save with Encoding" → choose UTF-8 with BOM
+# - Or run this once in PowerShell:
+
+Set-Content -Path .\HyperV-Toolkit.ps1 -Value (Get-Content .\HyperV-Toolkit.ps1) -Encoding UTF8
