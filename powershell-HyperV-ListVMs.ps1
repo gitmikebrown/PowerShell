@@ -10,6 +10,21 @@
     - Requires Hyper-V and admin privileges.
     - Easily extendable with new menu items.
 #>
+function Confirm-AdminMode {
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+    if (-not $isAdmin) {
+        Write-Host "`nThis script must be run as Administrator." -ForegroundColor Red
+        Write-Host "Please right-click and select 'Run as Administrator' to continue." -ForegroundColor Yellow
+        Pause
+        exit
+    } else {
+        Write-Host "Running in Administrator mode." -ForegroundColor Green
+    }
+}
+# Call this at the top of your script
+Confirm-AdminMode
+
 
 function Show-Menu {
     Clear-Host
@@ -40,16 +55,44 @@ function List-VMs {
 
 function Show-VMPaths {
     $vms = Get-VM
+    $report = @()
+
     foreach ($vm in $vms) {
-        $vhdPaths = (Get-VMHardDiskDrive -VMName $vm.Name).Path -join "`n            "
+        $vhdDrives = Get-VMHardDiskDrive -VMName $vm.Name
+        $vhdPaths = @()
+
+        foreach ($drive in $vhdDrives) {
+            $path = $drive.Path
+            if (-not (Test-Path $path)) {
+                $vhdPaths += "Missing: $path"
+            } else {
+                $vhdPaths += $path
+            }
+        }
+
+        $joinedPaths = $vhdPaths -join "`n            "
+
         Write-Host "`nName: $($vm.Name)"
         Write-Host "  State:          $($vm.State)"
         Write-Host "  Memory:         $($vm.MemoryStartup) MB"
         Write-Host "  Generation:     $($vm.Generation)"
         Write-Host "  Config Path:    $($vm.ConfigurationLocation)"
-        Write-Host "  VHD Path(s):    $vhdPaths"
+        Write-Host "  VHD Path(s):    $joinedPaths"
         Write-Host "---------------------------------------------"
+
+        $report += [PSCustomObject]@{
+            Name            = $vm.Name
+            State           = $vm.State
+            MemoryStartup   = "$($vm.MemoryStartup) MB"
+            Generation      = $vm.Generation
+            ConfigPath      = $vm.ConfigurationLocation
+            VHDPaths        = $joinedPaths
+        }
     }
+
+    # Optional: Export to file
+    $report | Out-File "$env:USERPROFILE\vm_vhd_report.txt"
+
     Pause
 }
 
@@ -101,6 +144,7 @@ function Stop-VMInteractive {
 }
 
 # Main loop
+$exitLoop = $false
 do {
     Show-Menu
     $choice = Read-Host "Select an option (1-5)"
@@ -109,7 +153,13 @@ do {
         "2" { Show-VMPaths }
         "3" { Start-VMInteractive }
         "4" { Stop-VMInteractive }
-        "5" { Write-Host "Exiting..."; break }
+        "5" {
+            $confirm = Read-Host "Are you sure you want to exit? (Y/N)"
+            if ($confirm -match '^[Yy]$') {
+                Write-Host "Exiting..."
+                $exitLoop = $true
+            }
+        }
         default { Write-Host "Invalid selection."; Pause }
     }
-} while ($true)
+} while (-not $exitLoop)
