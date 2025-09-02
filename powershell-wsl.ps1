@@ -126,8 +126,8 @@ wsl -c "sudo apt update && sudo apt upgrade -y"
 # ─────────────────────────────────────────────
 # 🛑 Terminate or shut down WSL
 # ─────────────────────────────────────────────
-wsl --terminate Ubuntu
-wsl --shutdown
+wsl --terminate Ubuntu #Terminates the specified distro. Can be restarted later.
+wsl --shutdown #Shuts down all WSL instances and the WSL 2 lightweight VM
 
 # ─────────────────────────────────────────────
 # 📊 Check WSL system status
